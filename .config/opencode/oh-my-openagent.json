@@ -1,0 +1,99 @@
+{
+  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/oh-my-opencode.schema.json",
+  "agents": {
+    "atlas": {
+      "model": "deepseek/deepseek-v4-pro"
+    },
+    "Hephaestus": {
+      "model": "deepseek/deepseek-v4-pro"
+    },
+    "metis": {
+      "model": "deepseek/deepseek-v4-pro"
+    },
+    "momus": {
+      "model": "deepseek/deepseek-v4-pro"
+    },
+    "prometheus": {
+      "model": "deepseek/deepseek-v4-flash"
+    },
+    "sisyphus": {
+      "model": "deepseek/deepseek-v4-pro",
+      "ultrawork_model": "deepseek/deepseek-v4-pro"
+    },
+    "sisyphus-junior": {
+      "model": "deepseek/deepseek-v4-flash"
+    },
+    "explore": {
+      "model": "deepseek/deepseek-v4-pro"
+    },
+    "librarian": {
+      "model": "deepseek/deepseek-v4-flash"
+    },
+    "multimodal-looker": {
+      "model": "deepseek/deepseek-v4-flash"
+    },
+    "oracle": {
+      "model": "deepseek/deepseek-v4-pro"
+    }
+  },
+  "categories": {
+    "artistry": {
+      "model": "deepseek/deepseek-v4-flash"
+    },
+    "deep": {
+      "model": "deepseek/deepseek-v4-pro"
+    },
+    "quick": {
+      "model": "deepseek/deepseek-v4-flash"
+    },
+    "ultrabrain": {
+      "model": "deepseek/deepseek-v4-pro"
+    },
+    "unspecified-high": {
+      "model": "deepseek/deepseek-v4-pro"
+    },
+    "unspecified-low": {
+      "model": "deepseek/deepseek-v4-flash"
+    },
+    "visual-engineering": {
+      "model": "deepseek/deepseek-v4-pro"
+    },
+    "writing": {
+      "model": "deepseek/deepseek-v4-flash"
+    }
+  },
+  "lsp": {
+    "basedpyright": {
+      "command": [
+        "basedpyright-langserver",
+        "--stdio"
+      ],
+      "extensions": [
+        ".py",
+        ".pyi"
+      ],
+      "disabled": false
+    },
+    "clangd": {
+      "command": [
+        "clangd-20",
+        "--background-index"
+      ],
+      "extensions": [
+        ".cpp",
+        ".cxx",
+        ".cc",
+        ".c++",
+        ".c",
+        ".h",
+        ".hpp",
+        ".hxx",
+        ".hh"
+      ],
+      "disabled": false
+    },
+    "pyright": {
+      "disabled": true
+    }
+  }
+}
