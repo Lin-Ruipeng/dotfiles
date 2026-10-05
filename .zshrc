@@ -17,7 +17,7 @@ source $ZSH/oh-my-zsh.sh
 export PATH="$HOME/.local/bin:$PATH"
 
 # Rust 环境
-. "$HOME/.cargo/env"
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 
 # ============================================================
 #  别名
@@ -37,7 +37,7 @@ export FZF_DEFAULT_OPTS="--height 40% --layout=reverse --border"
 #  代理设置（适用于 WSL2 通过 Windows 主机）
 # ============================================================
 # 自动获取 Windows 主机 IP（每次启动时获取一次）
-hostip=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}')
+hostip=127.0.0.1   # .wslconfig 是 mirrored 网络，WSL 直接复用 Windows 的 localhost
 proxy_port=7890
 
 alias setproxy='
@@ -60,12 +60,13 @@ alias unsetproxy='
 #  开发工具路径
 # ============================================================
 # opencode
-export PATH="/home/muxinyue/.opencode/bin:$PATH"
+export PATH="$HOME/.opencode/bin:$PATH"
 
 # NVM（Node 版本管理）
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-# 默认使用的 Node 版本路径
-export PATH="$HOME/.nvm/versions/node/v24.15.0/bin:$PATH"
+# 默认使用的 Node 版本路径（自动取已安装的最新版本，不写死版本号）
+_nvm_node_bin=$(ls -d "$HOME"/.nvm/versions/node/*/bin 2>/dev/null | sort -V | tail -1)
+[ -n "$_nvm_node_bin" ] && export PATH="$_nvm_node_bin:$PATH"
 
