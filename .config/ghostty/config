@@ -1,0 +1,38 @@
+# Ghostty 配置（安装 ghostty 后自动生效）
+# 参考: https://ghostty.org/docs/config · 查看最终配置: ghostty +show-config
+# 提示: 本机登录 shell 已是 /usr/bin/zsh，Ghostty 会自动使用它
+
+# ── 主题：跟随 GNOME 明暗模式自动切换 ──────────────────────────
+theme = light:Catppuccin Latte,dark:Catppuccin Mocha
+# 想固定深色就改成: theme = Catppuccin Mocha
+# 查看全部内置主题: ghostty +list-themes
+
+# ── 字体：Nerd Font 连字 + 中文回退 ────────────────────────────
+font-family = FiraCode Nerd Font Mono
+font-family = Noto Sans Mono CJK SC
+font-size = 14
+# font-feature = -calt          # 取消注释可关闭编程连字
+
+# ── 光标 / 鼠标 ────────────────────────────────────────────────
+cursor-style = block
+cursor-style-blink = true
+mouse-hide-while-typing = true
+# 选中即复制到系统剪贴板
+copy-on-select = clipboard
+
+# ── 窗口观感 ───────────────────────────────────────────────────
+window-padding-x = 10
+window-padding-y = 8
+window-padding-balance = true
+background-opacity = 0.95
+# background-blur = 20          # 仅 KDE 等支持；GNOME 下无效，故注释
+# confirm-close-surface = false # 取消注释：运行中程序关闭窗口不再确认（默认确认，更安全）
+# gtk-tabs-location = hidden    # 取消注释：隐藏标签栏，更接近 libadwaita 风格
+
+# ── Shell 集成（zsh/bash 自动检测）─────────────────────────────
+# 登录 shell 已是 /usr/bin/zsh，但当前 GNOME 会话是在 chsh 之前启动的，
+# 会话环境变量 SHELL 仍残留为 /bin/bash，Ghostty 会据此误开 bash。
+# 显式指定 zsh 最稳妥（重新登录后系统环境会自行修正，本行也可保留）。
+command = /usr/bin/zsh -l
+shell-integration = detect
+shell-integration-features = cursor,sudo,title

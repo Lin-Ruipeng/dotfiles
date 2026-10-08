@@ -1,16 +1,26 @@
 # dotfiles
 
-My personal dotfiles for shell, editor, WSL &amp; network environment. | 个人终端、编辑器、WSL 与网络环境配置文件集合
+My personal dotfiles for shell, editor, terminal, WSL & network environment. | 个人 Shell、编辑器、终端模拟器、WSL 与网络环境配置文件集合
 
 ## 包含内容 / Contents
 
 | 文件 | 说明 |
 | --- | --- |
-| [`.zshrc`](.zshrc) | Zsh 配置：Oh My Zsh（robbyrussell 主题）、`git` / `zsh-autosuggestions` / `zsh-syntax-highlighting` 插件、PATH 与 Rust/Cargo 环境变量 |
-| [`.vimrc`](.vimrc) | Vim 基础配置：显示行号、语法高亮、Tab 转 4 空格 |
+| [`.zshrc`](.zshrc) | Zsh 配置：Oh My Zsh（robbyrussell 主题）、`git` / `zsh-autosuggestions` / `zsh-syntax-highlighting` 插件、fzf 模糊搜索、代理开关别名、NVM 与 Rust/Cargo 环境变量 |
+| [`.vimrc`](.vimrc) | Vim 基础配置：显示行号、语法高亮、Tab 转 4 空格（C/C++ 为 2 空格）、自动缩进与当前行高亮 |
+| [`.config/ghostty/config`](.config/ghostty/config) | Ghostty 终端配置：明暗自适应主题、Nerd Font 连字 + 中文回退、选中即复制、zsh shell 集成 |
 | [`.wslconfig`](.wslconfig) | WSL2 配置：镜像网络模式、DNS 隧道、Windows 防火墙、`autoProxy` 自动继承 Windows 代理 |
-| [`.config/opencode/opencode.json`](.config/opencode/opencode.json) | OpenCode 配置：启用 LSP，配置 MCP 服务（Tavily 等） |
 | [`sparkle.yaml`](sparkle.yaml) | Sparkle（基于 mihomo 内核的 Windows 代理客户端）的 `prepend-rules` 前置分流规则 |
+
+## ghostty 配置说明
+
+- **主题**：`Catppuccin Latte` / `Catppuccin Mocha` 随 GNOME 明暗模式自动切换；如需固定深色可改为 `theme = Catppuccin Mocha`。
+- **字体**：`FiraCode Nerd Font Mono`（Nerd Font 连字）+ `Noto Sans Mono CJK SC` 中文回退，需自行安装对应字体。
+- **交互**：块状光标并闪烁、选中即复制到系统剪贴板、输入时隐藏鼠标。
+- **窗口**：自定义内边距与 95% 不透明度；GNOME 不支持背景模糊，`background-blur` 已注释。
+- **Shell 集成**：显式 `command = /usr/bin/zsh -l` 启动登录 zsh，避免旧 GNOME 会话中 `SHELL` 残留为 bash 导致误判；集成功能为 cursor / sudo / title。
+
+> 提示：`ghostty +show-config` 查看最终生效配置，`ghostty +list-themes` 查看全部内置主题，文档见 <https://ghostty.org/docs/config>。
 
 ## sparkle.yaml 规则说明
 
@@ -38,8 +48,10 @@ git clone https://github.com/Lin-Ruipeng/dotfiles.git ~/dotfiles
 ```bash
 ln -sf ~/dotfiles/.zshrc ~/.zshrc
 ln -sf ~/dotfiles/.vimrc ~/.vimrc
-ln -sf ~/dotfiles/.config/opencode ~/.config/opencode
+ln -sf ~/dotfiles/.config/ghostty ~/.config/ghostty
 ```
+
+> 注意：若 `~/.config/ghostty` 已存在，需先备份并删除该目录再执行软链接，否则会在原目录内创建嵌套链接。
 
 WSL 配置需放到 Windows 用户目录（在 WSL 中执行，把 `<WindowsUser>` 换成实际用户名）：
 
