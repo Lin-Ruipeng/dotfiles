@@ -59,9 +59,6 @@ alias unsetproxy='
 # ============================================================
 #  开发工具路径
 # ============================================================
-# opencode
-export PATH="$HOME/.opencode/bin:$PATH"
-
 # NVM（Node 版本管理）
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
