@@ -205,13 +205,13 @@ fi
 if ! is_wsl; then
   check_cmd ghostty "sudo apt install ghostty"
   if command -v fc-list >/dev/null 2>&1; then
-    if fc-list 2>/dev/null | grep -qi "FiraCode Nerd Font"; then
+    if fc-list 2>/dev/null | grep -i "FiraCode Nerd Font" >/dev/null; then
       log "✓ 字体 FiraCode Nerd Font"
     else
       log "✗ 字体 FiraCode Nerd Font —— 从 GitHub nerd-fonts 下载 FiraCode.zip，解压到 ~/.local/share/fonts 后执行 fc-cache -fv"
       MISSING=$((MISSING + 1))
     fi
-    if fc-list 2>/dev/null | grep -qi "Noto Sans Mono CJK SC"; then
+    if fc-list 2>/dev/null | grep -i "Noto Sans Mono CJK SC" >/dev/null; then
       log "✓ 字体 Noto Sans Mono CJK SC"
     else
       log "✗ 字体 Noto Sans Mono CJK SC —— sudo apt install fonts-noto-cjk"
