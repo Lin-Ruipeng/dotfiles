@@ -5,7 +5,14 @@ export ZSH="$HOME/.oh-my-zsh"
 ZSH_THEME="robbyrussell"
 # 可选主题: powerlevel10k/powerlevel10k
 
-plugins=(git zsh-autosuggestions zsh-syntax-highlighting)
+plugins=(git)
+for _plugin in zsh-autosuggestions zsh-syntax-highlighting; do
+  if [ -f "${ZSH_CUSTOM:-$ZSH/custom}/plugins/$_plugin/$_plugin.plugin.zsh" ] ||
+     [ -f "$ZSH/plugins/$_plugin/$_plugin.plugin.zsh" ]; then
+    plugins+=("$_plugin")
+  fi
+done
+unset _plugin
 
 if [ -f "$ZSH/oh-my-zsh.sh" ]; then
   source "$ZSH/oh-my-zsh.sh"
@@ -38,6 +45,15 @@ if [ -n "$_bat_cmd" ]; then
   alias bat="$_bat_cmd"
 fi
 
+# 剪贴板：按当前桌面会话选择工具，无桌面时不设置别名
+if [ -n "${WAYLAND_DISPLAY:-}" ] && (( $+commands[wl-copy] && $+commands[wl-paste] )); then
+  alias cl-copy="wl-copy"
+  alias cl-paste="wl-paste"
+elif [ -n "${DISPLAY:-}" ] && (( $+commands[xclip] )); then
+  alias cl-copy="xclip -selection clipboard"
+  alias cl-paste="xclip -selection clipboard -o"
+fi
+
 # ============================================================
 #  fzf 模糊搜索配置
 # ============================================================
@@ -58,7 +74,7 @@ fi
 # ============================================================
 #  代理设置（适用于 WSL2 通过 Windows 主机）
 # ============================================================
-# 自动获取 Windows 主机 IP（每次启动时获取一次）
+# 镜像网络使用 localhost；其他网络模式可在 ~/.zshrc.local 中覆盖
 hostip=127.0.0.1   # .wslconfig 是 mirrored 网络，WSL 直接复用 Windows 的 localhost
 proxy_port=7890
 
@@ -85,7 +101,10 @@ alias unsetproxy='
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-# 默认使用的 Node 版本路径（自动取已安装的最新版本，不写死版本号）
-_nvm_node_bin=$(find "$HOME/.nvm/versions/node" -maxdepth 2 -type d -name bin 2>/dev/null | sort -V | tail -1)
-[ -n "$_nvm_node_bin" ] && export PATH="$_nvm_node_bin:$PATH"
+# Node 版本与 PATH 由 NVM 管理，尊重 default 和当前已选择的版本。
+
+# 本机专用配置（不随仓库分发），放在最后以便覆盖通用设置
+if [ -f "$HOME/.zshrc.local" ]; then
+  source "$HOME/.zshrc.local"
+fi
 

@@ -15,6 +15,8 @@ font-size = 14
 
 # ── 光标 / 鼠标 ────────────────────────────────────────────────
 cursor-style = block
+cursor-color = #FEDFE1
+cursor-text = #1E1E2E
 cursor-style-blink = true
 mouse-hide-while-typing = true
 # 选中即复制到系统剪贴板
@@ -35,4 +37,5 @@ background-opacity = 0.95
 # 显式指定 zsh 最稳妥（重新登录后系统环境会自行修正，本行也可保留）。
 command = /usr/bin/zsh -l
 shell-integration = detect
-shell-integration-features = cursor,sudo,title
+# 保留方块光标，避免 Shell 集成在输入提示处将其改成竖线
+shell-integration-features = no-cursor,sudo,title,ssh-env

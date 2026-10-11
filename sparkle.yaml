@@ -4,8 +4,8 @@ prepend-rules:
   # ===================================================
   - PROCESS-NAME,UURemote.exe,DIRECT
   - PROCESS-NAME,uuycmgr.exe,DIRECT
-  - PROCESS-NAME,GameViewer.exe,DIRECT 
-  
+  - PROCESS-NAME,GameViewer.exe,DIRECT
+
   # ===================================================
   # 2. 接管 Codex 独立客户端
   # ===================================================
@@ -15,14 +15,14 @@ prepend-rules:
   # 3. 禁用 QUIC (HTTP/3)，强制后续流量使用更稳定的 TCP 代理
   # ===================================================
   - UDP-PORT,443,REJECT
-  
+
   # ===================================================
   # 4. Gemini 专属服务域名
   # ===================================================
   - DOMAIN-SUFFIX,gemini.google.com,openAI
   - DOMAIN-SUFFIX,generativelanguage.googleapis.com,openAI
   - DOMAIN-SUFFIX,ai.google.dev,openAI
-  
+
   # ===================================================
   # 5. Google 搜索及周边底层依赖资源
   # ===================================================
@@ -30,9 +30,9 @@ prepend-rules:
   - DOMAIN-SUFFIX,googleapis.com,openAI
   - DOMAIN-SUFFIX,gstatic.com,openAI
   - DOMAIN-SUFFIX,googleusercontent.com,openAI
-  
+
   # ===================================================
   # 6. 兜底规则
   # ===================================================
   - DOMAIN-KEYWORD,google,openAI
-  
+

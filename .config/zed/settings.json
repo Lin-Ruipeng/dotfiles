@@ -1,0 +1,21 @@
+{
+  "agent": {
+    "favorite_models": [],
+    "inline_assistant_model": {
+      "provider": "deepseek",
+      "model": "deepseek-flash",
+      "enable_thinking": true
+    },
+    "model_parameters": []
+  },
+  "session": {
+    "trust_all_worktrees": true
+  },
+  "ui_font_size": 24,
+  "buffer_font_size": 20,
+  "theme": {
+    "mode": "system",
+    "light": "One Light",
+    "dark": "One Dark"
+  }
+}

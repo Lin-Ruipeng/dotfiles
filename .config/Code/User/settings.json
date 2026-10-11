@@ -1,0 +1,13 @@
+{
+  "editor.cursorStyle": "block",
+  "editor.cursorBlinking": "blink",
+  "terminal.integrated.cursorStyle": "block",
+  "terminal.integrated.cursorStyleInactive": "block",
+  "terminal.integrated.cursorBlinking": true,
+  "workbench.colorCustomizations": {
+    "editorCursor.foreground": "#FEDFE1",
+    "editorCursor.background": "#1E1E2E",
+    "terminalCursor.foreground": "#FEDFE1",
+    "terminalCursor.background": "#1E1E2E"
+  }
+}
