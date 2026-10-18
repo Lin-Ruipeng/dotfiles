@@ -14,7 +14,7 @@ My personal dotfiles for shell, editor, terminal, WSL & network environment. | �
 | [`.config/Code/User/settings.json`](.config/Code/User/settings.json) | VS Code 光标配置片段：编辑区与集成终端使用樱花粉色方块光标，部署时合并并保留其他设置 |
 | [`.config/zed/settings.json`](.config/zed/settings.json) | Zed 图形编辑器：字体大小、明暗主题、DeepSeek 内联助手等用户设置，不包含 Copilot 注册项或凭据 |
 | [`.wslconfig`](.wslconfig) | WSL2 配置：镜像网络模式、DNS 隧道、Windows 防火墙、`autoProxy` 自动继承 Windows 代理 |
-| [`sparkle.yaml`](sparkle.yaml) | Sparkle（基于 mihomo 内核的 Windows 代理客户端）的 `prepend-rules` 前置分流规则 |
+| [`sparkle.yaml`](sparkle.yaml) | Sparkle（基于 mihomo 内核的 Windows 代理客户端）的 `+rules` 前置插入规则：Gemini 域名单独走 `🔰 节点选择` 策略组 |
 
 ## ghostty 配置说明
 
@@ -46,16 +46,18 @@ VS Code 只合并仓库中的光标条目，保留其他用户设置、其他配
 
 ## sparkle.yaml 规则说明
 
-按优先级从高到低：
+`+rules` 为「前置插入」，会排在订阅自带规则之前，因此优先生效。当前仅保留 Gemini 专属分流：将 Gemini 相关域名从 `openAI` 组摘出，单独走 `🔰 节点选择` 策略组。
 
-1. **远程控制直连**：`UURemote.exe`、`uuycmgr.exe`、`GameViewer.exe` 进程走 `DIRECT`，避免远程桌面被代理断开。
-2. **Codex 客户端接管**：`codex.exe` 走 `openAI` 策略组。
-3. **禁用 QUIC**：`UDP-PORT,443` 直接 `REJECT`，强制后续流量走更稳定的 TCP 代理。
-4. **Gemini 域名**：`gemini.google.com`、`generativelanguage.googleapis.com`、`ai.google.dev` 走 `openAI` 策略组。
-5. **Google 及依赖资源**：`google.com`、`googleapis.com`、`gstatic.com`、`googleusercontent.com` 走 `openAI` 策略组。
-6. **兜底规则**：`DOMAIN-KEYWORD,google` 走 `openAI` 策略组。
+规则列表（均为 `DOMAIN-SUFFIX` 匹配，目标策略组为 `🔰 节点选择`）：
 
-> 注意：规则引用了名为 `openAI` 的策略组，使用前请确保客户端中已存在同名代理组，或在 Sparkle 的覆写配置中调整组名。
+- `gemini.google.com`
+- `generativelanguage.googleapis.com`
+- `aida.googleapis.com`
+- `ai.google.dev`
+
+> 注意：不要用 `prepend-rules`——mihomo 与 Sparkle 都不识别该键，会被静默忽略。
+
+> 注意：规则引用了名为 `🔰 节点选择` 的策略组，使用前请确保客户端中已存在同名代理组，或在 Sparkle 的覆写配置中调整组名。
 
 ## 使用方法 / Usage
 
@@ -112,7 +114,7 @@ bash bootstrap.sh             # 正式部署
 | 桌面 | 剪贴板工具 | Wayland：`sudo apt install wl-clipboard`；X11：`sudo apt install xclip` |
 | 桌面 | FiraCode Nerd Font | 从 [nerd-fonts](https://github.com/ryanoasis/nerd-fonts) 下载 `FiraCode.zip`，解压到 `~/.local/share/fonts` 后执行 `fc-cache -fv` |
 | 桌面 | Noto CJK | `sudo apt install fonts-noto-cjk` |
-| Windows | Sparkle | 手动下载安装 GUI 版本并手动配置（代理组 `openAI`、混合端口 7890） |
+| Windows | Sparkle | 手动下载安装 GUI 版本并手动配置（代理组 `🔰 节点选择`、混合端口 7890） |
 
 > 注意：网络受限时（如中国大陆直连 GitHub）请先开启代理再安装依赖。WSL 镜像网络下先在 Windows 手动启动 Sparkle（混合端口 7890），再执行 `source ~/.zshrc` 和 `setproxy`。`setproxy` / `unsetproxy` 也会修改 Git 全局代理设置。
 
