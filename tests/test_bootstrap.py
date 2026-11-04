@@ -27,7 +27,8 @@ class BootstrapTests(unittest.TestCase):
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / name, target)
         self.env = os.environ.copy()
-        for name in ("ZSH_CUSTOM", "ZDOTDIR", "BASH_ENV", "ENV"):
+        for name in ("ZSH_CUSTOM", "ZDOTDIR", "BASH_ENV", "ENV", "PI_CODING_AGENT_DIR",
+                     "DOTFILES_PI_BACKUP_DIR", "NVM_DIR", "NVM_BIN", "NVM_INC"):
             self.env.pop(name, None)
         self.env.update(HOME=str(self.home), DISPLAY="", WAYLAND_DISPLAY="",
                         XDG_CONFIG_HOME="", PATH=f"{self.bin}:/usr/bin:/bin",
@@ -46,7 +47,7 @@ fi
 
     def run_bootstrap(self, *args, success=True):
         result = subprocess.run(
-            ["/bin/bash", str(self.repo / "bootstrap.sh"), *args],
+            ["/bin/bash", str(self.repo / "bootstrap.sh"), "--skip-pi", *args],
             env=self.env, capture_output=True, text=True)
         if success:
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

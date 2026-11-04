@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 只复制配置，不安装软件。部署结果及新备份均独立于仓库。
+# 复制独立配置，并部署 NVM / Node LTS / Pi；其他软件仅报告依赖。
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
@@ -8,6 +8,8 @@ BACKUP_ROOT="$HOME/.dotfiles-backup"
 BACKUP_DIR=""
 DRY_RUN=0
 SKIP_ZED=0
+SKIP_PI=0
+PI_FAILED=0
 MISSING=0
 ACTIVE_STAGE=""
 ACTIVE_OLD_LINK=""
@@ -19,9 +21,10 @@ is_wsl() { grep -qi microsoft /proc/version 2>/dev/null; }
 has_gui() { [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; }
 
 usage() {
-  log "用法: bash bootstrap.sh [--dry-run] [--skip-zed]"
+  log "用法: bash bootstrap.sh [--dry-run] [--skip-zed] [--skip-pi]"
   log "  --dry-run    仅预览，不修改任何文件"
   log "  --skip-zed   保留本机 Zed 设置，跳过 Zed 部署与依赖检查"
+  log "  --skip-pi    跳过 NVM / Node / Pi / 插件 / Context7 的安装与变更"
 }
 
 # 仅清理本次 mktemp 生成的临时副本；目录链接替换失败时恢复原链接。
@@ -55,6 +58,10 @@ backup_target() {
   fi
   ensure_backup_dir
   saved="$BACKUP_DIR/$key"
+  # 同一次部署多次修改同一配置时，始终保留最初版本。
+  if [ -e "$saved" ] || [ -L "$saved" ] || [ -f "$BACKUP_DIR/links/$key.target" ]; then
+    return 0
+  fi
   mkdir -p -- "$(dirname "$saved")"
   if [ -L "$dest" ]; then
     mkdir -p -- "$(dirname "$BACKUP_DIR/links/$key.target")"
@@ -199,6 +206,7 @@ main() {
     case "$1" in
       --dry-run) DRY_RUN=1 ;;
       --skip-zed) SKIP_ZED=1 ;;
+      --skip-pi) SKIP_PI=1 ;;
       -h|--help) usage; return 0 ;;
       *) log "未知参数: $1" >&2; usage; return 2 ;;
     esac
@@ -208,6 +216,11 @@ main() {
   trap cleanup EXIT
   trap 'exit 130' INT
   trap 'exit 143' TERM
+
+  if [ "$SKIP_PI" -eq 0 ]; then
+    [ -r "$REPO_DIR/scripts/setup_pi.sh" ] || die "缺少 Pi 部署模块"
+    [ -r "$REPO_DIR/scripts/pi_settings.js" ] || die "缺少 Pi 配置合并工具"
+  fi
 
   # 所有启用项在首次写入之前预检，避免源文件缺失造成半部署。
   validate_config "$REPO_DIR/.zshrc" "$HOME/.zshrc"
@@ -240,7 +253,7 @@ main() {
   log "== dotfiles 部署开始 =="
   [ "$DRY_RUN" -eq 0 ] || log "（dry-run 模式：仅预览，不修改任何文件）"
   log ""
-  log "[1/3] 通用配置"
+  log "[1/4] 通用配置"
   # 本地扩展先就位，再部署会加载它的 .zshrc。
   if [ -e "$REPO_DIR/.zshrc.local" ] || [ -L "$REPO_DIR/.zshrc.local" ]; then
     copy_config "$REPO_DIR/.zshrc.local" "$HOME/.zshrc.local"
@@ -251,7 +264,7 @@ main() {
   copy_config "$REPO_DIR/.vimrc" "$HOME/.vimrc"
 
   log ""
-  log "[2/3] 图形界面配置（Ghostty / Zed / VS Code）"
+  log "[2/4] 图形界面配置（Ghostty / Zed / VS Code）"
   if ! has_gui; then
     log "⏭  未检测到图形桌面，跳过 Ghostty / Zed / VS Code 配置及桌面依赖检查"
   else
@@ -269,7 +282,7 @@ main() {
   fi
 
   log ""
-  log "[3/3] WSL 配置（.wslconfig）"
+  log "[3/4] WSL 配置（.wslconfig）"
   if ! is_wsl; then
     log "⏭  非 WSL 环境，跳过 .wslconfig 部署"
   else
@@ -288,6 +301,19 @@ main() {
     log "   手动参考 sparkle.yaml；确认代理组 openAI 与混合端口 7890"
   fi
 
+  log ""
+  log "[4/4] NVM / Node LTS / Pi"
+  if [ "$SKIP_PI" -eq 1 ]; then
+    log "⏭  --skip-pi：跳过 NVM / Node / Pi / 插件 / Context7 的所有变更"
+  else
+    local pi_options=()
+    [ "$DRY_RUN" -eq 0 ] || pi_options+=(--dry-run)
+    # 独立进程保留模块内的 errexit；安装失败仍运行下方的依赖汇报。
+    if ! DOTFILES_PI_BACKUP_DIR="$BACKUP_DIR" bash "$REPO_DIR/scripts/setup_pi.sh" "${pi_options[@]}"; then
+      PI_FAILED=1
+    fi
+  fi
+
   check_dependencies
   local login_shell
   login_shell="$(getent passwd "${USER:-$(id -un)}" | cut -d: -f7 || true)"
@@ -302,15 +328,18 @@ main() {
   fi
   if [ "$DRY_RUN" -eq 1 ]; then
     log "（dry-run 结束：以上为将要执行的动作，未修改任何文件）"
+  elif [ "$PI_FAILED" -ne 0 ]; then
+    log "（配置已部署；Pi 部分存在失败，详见上方汇总。修复后可重跑；新开终端或 source ~/.zshrc 使配置生效）"
   else
     log "（部署完成；配置独立于仓库。新开终端或执行 source ~/.zshrc 后生效）"
   fi
+  return "$PI_FAILED"
 }
 
 check_dependencies() {
   # ---------- 依赖检查（只报告，不安装） ----------
   log ""
-  log "== 依赖检查（缺失项请自行安装，本脚本不会自动安装）=="
+  log "== 其他依赖检查（缺失项请自行安装）=="
 
   check_cmd() {
     local name="$1" hint="$2"
@@ -366,7 +395,7 @@ check_dependencies() {
   if [ -s "$HOME/.nvm/nvm.sh" ]; then
     log "✓ NVM"
   else
-    log "✗ NVM —— curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash"
+    log "✗ NVM —— 重跑 bash bootstrap.sh 自动安装；或参考 https://github.com/nvm-sh/nvm"
     MISSING=$((MISSING + 1))
   fi
 

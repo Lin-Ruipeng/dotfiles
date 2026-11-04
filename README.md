@@ -6,7 +6,7 @@ My personal dotfiles for shell, editor, terminal, WSL & network environment. | �
 
 | 文件 | 说明 |
 | --- | --- |
-| [`bootstrap.sh`](bootstrap.sh) | 一键部署脚本：复制独立配置并自动备份、识别 WSL / 桌面环境、输出缺失依赖清单，支持 `--dry-run` / `--skip-zed` |
+| [`bootstrap.sh`](bootstrap.sh) | 一键部署：复制独立配置并备份，自动部署 NVM / Node LTS / Pi，识别 WSL / 桌面环境；支持 `--dry-run` / `--skip-zed` / `--skip-pi` |
 | [`AGENTS.md`](AGENTS.md) | 给 AI Agent 的部署说明与安全边界，可把仓库直接交给 Agent 自动部署 |
 | [`.zshrc`](.zshrc) | Zsh 配置：Oh My Zsh、可用插件、fzf、剪贴板命令、代理开关、NVM 与 Rust/Cargo 环境，以及本机专用配置入口 |
 | [`.vimrc`](.vimrc) | Vim 基础配置：显示行号、语法高亮、Tab 转 4 空格（C/C++ 为 2 空格）、自动缩进与当前行高亮 |
@@ -70,12 +70,51 @@ bash bootstrap.sh --dry-run   # 预览将执行的动作
 bash bootstrap.sh             # 正式部署
 ```
 
-- **只部署配置，不安装任何软件**；部署结束后输出缺失依赖清单与安装指引（见下方「依赖清单」）。
+- **自动部署 NVM、最新 LTS Node.js、Pi 和指定插件**；其他软件输出缺失依赖清单与安装指引。仅复制配置时使用 `bash bootstrap.sh --skip-pi`。
 - **部署结果独立于仓库**：配置是普通文件，部署完成后可直接删除本地克隆目录；后续修改仓库不会自动影响已部署配置，需重新运行脚本更新。
-- 幂等可重复执行；内容一致的普通文件跳过，替换前备份到 `~/.dotfiles-backup/<时间戳>.<随机后缀>/`。
+- 可重复执行；内容一致的普通配置文件跳过，替换前备份到 `~/.dotfiles-backup/<时间戳>.<随机后缀>/`。Pi 套件每次运行追踪最新版本。
 - WSL 环境自动跳过桌面（ghostty）配置，并把 `.wslconfig` 复制到 Windows 用户目录，之后需在 Windows 手动执行 `wsl --shutdown` 使其生效。
 - 非 WSL 且检测到图形桌面时才部署 Ghostty；图形环境中部署 Zed 和 VS Code（包括 WSLg）。三者使用 `${XDG_CONFIG_HOME:-$HOME/.config}`。
 - 交给 Agent 使用：让 Agent 阅读仓库根目录的 [AGENTS.md](AGENTS.md)，按其步骤执行即可。
+
+### Pi agent 自动部署
+
+默认流程先准备 NVM 和 Node，再安装或更新 Pi、插件；有 GUI 时注册 Context7。`--skip-pi` 跳过这一整套变更；`--dry-run` 只显示计划，不联网、不加载 NVM、不运行 Pi CLI，也不创建锁或刷新凭据。
+
+**NVM 与 Node：**缺少 `~/.nvm/nvm.sh` 时运行 [NVM 官方安装脚本](https://github.com/nvm-sh/nvm#install--update-script)（当前采用 v0.40.8），用 `PROFILE=/dev/null` 避免追加 Shell 配置；仓库的 `.zshrc` 已负责加载 NVM。成功新装后输出“已帮你安装 NVM”。已有 NVM 复用，每次执行 `nvm install --lts`、`nvm use --lts`，并用 `nvm alias default <此次具体版本>` 设置默认值；旧 Node 版本保留。安装过程需要 curl，缺失时按提示手动准备。
+
+**Pi：**首次使用 [官网](https://pi.dev/) 的命令，在没有控制终端、输出不是 TTY 的子进程中执行，避免安装器启动交互会话：
+
+```bash
+curl -fsSL https://pi.dev/install.sh | sh
+```
+
+已有官方管理安装执行 `pi update --no-approve`。插件逐个执行 `pi install npm:<包名> --no-approve`，受管理插件的旧版本锁定会被替换为最新版；用户额外插件及项目局部配置保留。Pi 配置使用 `${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}`，独立于 `XDG_CONFIG_HOME`；安装及配置目录应位于仓库外。
+
+| 环境 | 自动安装并更新的计划插件 | Context7 |
+| --- | --- | --- |
+| `DISPLAY` 或 `WAYLAND_DISPLAY` 非空，包括 WSLg | `@plannotator/pi-extension` | 自动注册，用户手动登录 |
+| 无图形环境 | `pi-plan` | 跳过注册，已有 MCP 配置保留 |
+
+两种环境都安装并更新 `@juicesharp/rpiv-ask-user-question`、`@juicesharp/rpiv-todo`、`pi-subagents`、`pi-web-access`、`pi-extmgr`。已存在的另一种计划插件保留安装，备份后禁用 extensions、skills、prompts、themes 全部资源，避免残留技能与快捷键冲突；当前选中的计划插件启用。
+
+GUI 分支在 Context7 缺失或配置不一致时，先保存备份，再使用以下命令统一 URL 和暴露方式；其他 MCP 服务和登录凭据保留：
+
+```bash
+pi mcp add context7 --url https://mcp.context7.com/mcp --exposure direct
+```
+
+注册通过临时配置完成，成功后以独立文件部署。部署脚本会提醒用户手动执行下面的授权命令，不会自动打开登录页面：
+
+```bash
+pi mcp login context7
+```
+
+**终端规划限制：**当前原版 [pi-plan](https://github.com/zx06/pi-packages/tree/main/packages/plan) 可用 `/plan`、`/plan:status`、`Ctrl+Alt+P` 或 `pi --plan` 操作，审批在终端内完成。已核查的 0.2.0 版本在规划时只启用 `read/bash/grep/find/ls`，退出或执行时改为 `read/bash/edit/write`；不会自动恢复问答、todo、联网、子代理等额外工具。仓库按原版安装，未维护兼容补丁；后续更新以插件实际行为为准。
+
+**失败与迁移：**单个插件失败后继续其他独立项；NVM、Node 或 Pi 等前置失败则跳过依赖项。末尾汇总成功、失败、跳过项、备份目录和重试方法，有失败时返回非零状态；等待手动登录属于正常待办。已有非官方管理 Pi 时，脚本提示先手动使用官网安装器迁移，不代为卸载旧安装。
+
+如果旧 Pi 私有 Node 入口会覆盖 NVM，先将其内容备份，再把入口移入本次备份的 `retired/` 下，保留原运行时版本目录。恢复时使用独立内容备份，链接原目标只作为文字记录。同一轮部署反复修改同一文件时保留最初备份。
 
 ### 旧链接迁移与备份恢复
 
@@ -93,7 +132,9 @@ bash bootstrap.sh             # 正式部署
 
 `sparkle.yaml` 仅供用户手动参考和配置 Sparkle；脚本与 Agent 不安装客户端，也不自动合并规则。
 
-### 依赖清单（需自行安装，仓库与脚本不会代装）
+### 依赖清单
+
+NVM / Node / Pi 由默认部署流程管理，其余依赖需自行安装。使用 `--skip-pi` 时也跳过 NVM 和 Node 的安装与更新。
 
 | 类别 | 软件 | 安装方式 |
 | --- | --- | --- |
@@ -105,7 +146,9 @@ bash bootstrap.sh             # 正式部署
 | 必需 | uv | 仅使用官方独立安装脚本：`curl -LsSf https://astral.sh/uv/install.sh \| sh`（默认安装到 `~/.local/bin`，生成 `~/.local/bin/env`，供当前用户所有项目使用；安装方式限制见 [AGENTS.md](AGENTS.md#硬性边界)） |
 | 必需 | Oh My Zsh | `git clone --depth=1 https://github.com/ohmyzsh/ohmyzsh.git ~/.oh-my-zsh` |
 | 必需 | 插件 | `git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions.git ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions`（`zsh-syntax-highlighting` 同理） |
-| 必需 | NVM + Node | 安装 [NVM](https://github.com/nvm-sh/nvm) 后执行 `nvm install --lts` |
+| 自动管理 | NVM + Node LTS | 默认部署自动准备；缺少 NVM 时明确提示新装结果，最新 LTS 具体版本设为 default |
+| 自动管理 | Pi + 指定插件 | 官网 curl 首装，后续更新；环境分支与 Context7 登录见上方说明 |
+| Pi 安装工具 | curl / setsid | `sudo apt install curl util-linux`；setsid 用于隔离官网安装器交互，脚本不代装 |
 | 可选 | Rust / cargo | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh` |
 | 桌面（非 WSL） | ghostty | Ubuntu 26.04+：`sudo apt install ghostty`；其他版本见 [官方安装渠道](https://ghostty.org/docs/install/binary) |
 | 桌面 | Zed | [官方下载](https://zed.dev/download) / [Linux 安装说明](https://zed.dev/docs/linux)，由用户手动安装 |
@@ -122,12 +165,14 @@ bash bootstrap.sh             # 正式部署
 
 ```bash
 bash -n bootstrap.sh
+bash -n scripts/setup_pi.sh
 zsh -n .zshrc
+node --check scripts/pi_settings.js
 python3 -m unittest discover -s tests -v
 bash bootstrap.sh --dry-run
 ```
 
-回归测试仅使用临时 HOME 和配置副本，覆盖复制、旧链接迁移、独立备份、备份重名、复制失败、dry-run、WSL/桌面分支、配置目录和移走来源仓库后的可用性；测试不会安装软件或修改真实用户配置。
+回归测试使用临时 HOME、配置副本及 NVM / curl / Pi 命令替身，覆盖配置复制、独立备份、Pi 安装与更新、GUI/终端分支、规划插件禁用、MCP 注册与失败、dry-run 及移走来源仓库后的可用性；测试不会下载软件、登录账户或修改真实用户配置。Node 用于运行 Pi 配置合并工具的测试。
 
 ## License
 
