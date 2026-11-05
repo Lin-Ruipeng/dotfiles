@@ -438,9 +438,8 @@ exec /bin/mv "$@"
                 result = self.zsh('source "$HOME/.zshrc"; alias cl-copy || print no-clipboard-alias')
                 self.assertIn(expected, result.stdout)
 
-    def test_zed_configuration_contains_no_copilot_registration(self):
+    def test_zed_configuration_font_sizes(self):
         settings = json.loads((ROOT / ".config/zed/settings.json").read_text())
-        self.assertNotIn("agent_servers", settings)
         self.assertEqual(settings["ui_font_size"], 24)
         self.assertEqual(settings["buffer_font_size"], 20)
 

@@ -22,8 +22,10 @@ class PiBootstrapTests(unittest.TestCase):
 
     def setUp(self):
         config_tests.BootstrapTests.setUp(self)
-        for name in ("scripts/setup_pi.sh", "scripts/pi_settings.js"):
-            shutil.copyfile(ROOT / name, self.repo / name)
+        for name in ("scripts/setup_pi.sh", "scripts/pi_settings.js", ".pi/agent/AGENTS.md"):
+            target = self.repo / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(ROOT / name, target)
         self.assets = self.base / "fixtures"
         self.assets.mkdir()
         self.agent = self.home / ".pi/agent"
@@ -121,6 +123,13 @@ esac
     def commands(self):
         return self.logfile.read_text() if self.logfile.exists() else ""
 
+    def assert_plugin_installs(self, planner):
+        packages = (
+            "@juicesharp/rpiv-ask-user-question", "pi-subagents", "pi-web-access", "pi-extmgr", planner,
+        )
+        commands = [line for line in self.commands().splitlines() if line.startswith("pi install ")]
+        self.assertCountEqual(commands, [f"pi install npm:{package} --no-approve" for package in packages])
+
     def settings(self):
         return json.loads((self.agent / "settings.json").read_text())
 
@@ -150,14 +159,16 @@ esac
         self.assertIn("nvm alias default v26.1.2", commands)
         self.assertEqual((self.home / ".nvm/alias/default").read_text().strip(), "v26.1.2")
         self.assertIn("https://pi.dev/install.sh", commands)
-        self.assertIn("pi install npm:pi-plan --no-approve", commands)
-        self.assertNotIn("npm:@plannotator/pi-extension", commands)
+        self.assert_plugin_installs("pi-plan")
         self.assertNotIn("pi mcp", commands)
         self.assertFalse((self.agent / "mcp.json").exists())
-        self.assertEqual(len(self.settings()["packages"]), 6)
+        self.assertEqual(len(self.settings()["packages"]), 5)
         self.assertIn("不自动恢复", output)
         self.repo.rename(self.base / "source removed")
         self.assertNotIn(str(self.repo), (self.agent / "settings.json").read_text())
+        instructions = self.agent / "AGENTS.md"
+        self.assertFalse(instructions.is_symlink())
+        self.assertEqual(instructions.read_bytes(), (ROOT / ".pi/agent/AGENTS.md").read_bytes())
         self.assertTrue((self.agent / "bin/pi").is_file())
 
     def test_existing_installs_update_and_gui_registers_manual_login(self):
@@ -168,7 +179,7 @@ esac
         self.assertNotIn("已帮你安装 NVM", output)
         self.assertNotIn("curl ", self.commands())
         self.assertIn("pi update --no-approve", self.commands())
-        self.assertIn("pi install npm:@plannotator/pi-extension --no-approve", self.commands())
+        self.assert_plugin_installs("@plannotator/pi-extension")
         self.assertIn("pi mcp add context7 --url https://mcp.context7.com/mcp --exposure direct", self.commands())
         self.assertNotIn("pi mcp login", self.commands())
         self.assertIn("用户手动完成：pi mcp login context7", output)
@@ -269,7 +280,7 @@ esac
         self.assertIn("pi mcp add", self.commands())
         self.assertIn("✗ 插件 pi-subagents", output)
         self.assertIn("✓ 插件 pi-web-access", output)
-        self.assertIn("其他依赖检查", output)
+        self.assertIn("== 依赖检查 ==", output)
         self.assertIn("存在失败", output)
 
     def test_prerequisite_failures_skip_dependent_steps(self):
@@ -438,6 +449,7 @@ exec /bin/mv "$@"
         self.run_bootstrap()
         self.assertTrue((self.agent / "settings.json").is_file())
         self.assertTrue((self.agent / "bin/pi").is_file())
+        self.assertEqual((self.agent / "AGENTS.md").read_bytes(), (ROOT / ".pi/agent/AGENTS.md").read_bytes())
         self.assertFalse((self.home / ".pi").exists())
 
     def test_agent_directory_inside_repository_is_rejected(self):
@@ -458,6 +470,58 @@ exec /bin/mv "$@"
         self.assertIn("仍引用本仓库", result.stderr)
         self.assertEqual(self.settings(), original)
         self.assertNotIn("pi.dev/install.sh", self.commands())
+
+    def test_pi_instructions_backup_and_idempotency(self):
+        instructions = self.agent / "AGENTS.md"
+        instructions.parent.mkdir(parents=True)
+        instructions.write_text("# Previous user instructions\n")
+        self.run_bootstrap()
+        self.assertEqual(instructions.read_bytes(), (ROOT / ".pi/agent/AGENTS.md").read_bytes())
+        backup = next(self.saved(b, instructions) for b in self.backups()
+                      if self.saved(b, instructions).is_file())
+        self.assertEqual(backup.read_text(), "# Previous user instructions\n")
+        before = instructions.stat().st_mtime_ns
+        self.run_bootstrap()
+        self.assertEqual(instructions.stat().st_mtime_ns, before)
+
+    def test_pi_instructions_link_becomes_independent(self):
+        self.agent.mkdir(parents=True)
+        source = self.repo / "old-instructions.md"
+        source.write_text("# Old linked instructions\n")
+        instructions = self.agent / "AGENTS.md"
+        instructions.symlink_to(source)
+        self.run_bootstrap()
+        self.assertFalse(instructions.is_symlink())
+        self.assertEqual(source.read_text(), "# Old linked instructions\n")
+        backup = next(self.saved(b, instructions) for b in self.backups()
+                      if self.saved(b, instructions).is_file())
+        self.repo.rename(self.base / "source unavailable")
+        self.assertEqual(instructions.read_bytes(), (ROOT / ".pi/agent/AGENTS.md").read_bytes())
+        self.assertEqual(backup.read_text(), "# Old linked instructions\n")
+
+    def test_missing_pi_instructions_fail_before_any_changes(self):
+        (self.repo / ".pi/agent/AGENTS.md").unlink()
+        before = self.snapshot()
+        self.run_bootstrap(success=False)
+        self.assertEqual(self.snapshot(), before)
+        self.assertEqual(self.commands(), "")
+
+    def test_retired_todo_is_not_loaded_or_installed(self):
+        cache = self.agent / "npm/node_modules/@juicesharp/rpiv-todo/package.json"
+        self.write_json(cache, {"name": "@juicesharp/rpiv-todo", "version": "2.15.0"})
+        original = {"packages": ["npm:@juicesharp/rpiv-todo",
+                    {"source": "npm:@juicesharp/rpiv-todo@2.15.0", "extensions": ["index.ts"]},
+                    "npm:user-extra"], "model": "personal"}
+        self.write_json(self.agent / "settings.json", original)
+        self.run_bootstrap()
+        self.assertNotIn("rpiv-todo", json.dumps(self.settings()))
+        self.assertIn("npm:user-extra", self.settings()["packages"])
+        self.assertEqual(self.settings()["model"], "personal")
+        self.assertNotIn("npm:@juicesharp/rpiv-todo", self.commands())
+        self.assertTrue(cache.is_file())
+        backup = next(self.saved(b, self.agent / "settings.json") for b in self.backups()
+                      if self.saved(b, self.agent / "settings.json").is_file())
+        self.assertEqual(json.loads(backup.read_text()), original)
 
 
 if __name__ == "__main__":

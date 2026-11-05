@@ -220,6 +220,7 @@ main() {
   if [ "$SKIP_PI" -eq 0 ]; then
     [ -r "$REPO_DIR/scripts/setup_pi.sh" ] || die "缺少 Pi 部署模块"
     [ -r "$REPO_DIR/scripts/pi_settings.js" ] || die "缺少 Pi 配置合并工具"
+    [ -f "$REPO_DIR/.pi/agent/AGENTS.md" ] && [ -r "$REPO_DIR/.pi/agent/AGENTS.md" ] || die "缺少 Pi 用户级指令 .pi/agent/AGENTS.md"
   fi
 
   # 所有启用项在首次写入之前预检，避免源文件缺失造成半部署。
@@ -292,13 +293,11 @@ main() {
       fi
       copy_config "$REPO_DIR/.wslconfig" "$win_dest"
       if [ "$wsl_changed" -eq 1 ]; then
-        log "⚠️  .wslconfig 部署后需在 Windows 中手动执行 'wsl --shutdown'（请自行执行）"
+        log "⚠️  .wslconfig 变更后，请在 Windows 中手动执行 'wsl --shutdown'"
       fi
     else
       log "⚠️  未能定位 Windows 用户目录，请手动复制 .wslconfig 到 Windows 用户目录"
     fi
-    log "📌 Sparkle 必须手动下载安装 GUI 版本并手动配置："
-    log "   手动参考 sparkle.yaml；确认代理组 openAI 与混合端口 7890"
   fi
 
   log ""
@@ -324,22 +323,21 @@ main() {
   if [ "$MISSING" -eq 0 ]; then
     log "🎉 必需依赖已全部满足"
   else
-    log "共 $MISSING 项必需依赖缺失：请参考上方提示手动安装（网络受限时请先开启代理）"
+    log "共 $MISSING 项必需依赖缺失，请按上方提示处理（网络受限时先开启代理）"
   fi
-  if [ "$DRY_RUN" -eq 1 ]; then
-    log "（dry-run 结束：以上为将要执行的动作，未修改任何文件）"
-  elif [ "$PI_FAILED" -ne 0 ]; then
-    log "（配置已部署；Pi 部分存在失败，详见上方汇总。修复后可重跑；新开终端或 source ~/.zshrc 使配置生效）"
-  else
-    log "（部署完成；配置独立于仓库。新开终端或执行 source ~/.zshrc 后生效）"
+  if [ "$DRY_RUN" -eq 0 ]; then
+    if [ "$PI_FAILED" -ne 0 ]; then
+      log "（配置已部署，Pi 部分存在失败。修复上方错误后可重跑。新开终端或执行 source ~/.zshrc 使配置生效）"
+    else
+      log "（部署完成，配置独立于仓库。新开终端或执行 source ~/.zshrc 后生效）"
+    fi
   fi
   return "$PI_FAILED"
 }
 
 check_dependencies() {
-  # ---------- 依赖检查（只报告，不安装） ----------
   log ""
-  log "== 其他依赖检查（缺失项请自行安装）=="
+  log "== 依赖检查 =="
 
   check_cmd() {
     local name="$1" hint="$2"

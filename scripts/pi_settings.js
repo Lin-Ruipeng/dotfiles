@@ -6,7 +6,7 @@ const { fileURLToPath } = require('node:url');
 const { isDeepStrictEqual } = require('node:util');
 
 const common = [
-  '@juicesharp/rpiv-ask-user-question', '@juicesharp/rpiv-todo',
+  '@juicesharp/rpiv-ask-user-question',
   'pi-subagents', 'pi-web-access', 'pi-extmgr',
 ];
 const planners = ['@plannotator/pi-extension', 'pi-plan'];
@@ -40,6 +40,8 @@ function settings(filename, mode) {
   const packages = [];
   for (const entry of value.packages || []) {
     const name = packageName(entry);
+    // Retire the old managed package without deleting its cached files.
+    if (name === '@juicesharp/rpiv-todo') continue;
     if (!required.includes(name) && name !== inactive) { packages.push(entry); continue; }
     if (seen.has(name)) continue;
     seen.add(name);

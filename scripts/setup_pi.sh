@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Runs as a child process so NVM selection and failures stay within this stage.
 set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)/bootstrap.sh"
 BACKUP_DIR="${DOTFILES_PI_BACKUP_DIR:-}"
@@ -93,6 +92,7 @@ pi_prepare_state() {
   case "$PI_AGENT_DIR" in "$REPO_DIR"|"$REPO_DIR"/*) die "Pi 安装目录不能位于仓库内" ;; esac
   export PI_CODING_AGENT_DIR="$PI_AGENT_DIR"
   PI_BIN="$PI_AGENT_DIR/bin/pi"
+  validate_config "$REPO_DIR/.pi/agent/AGENTS.md" "$PI_AGENT_DIR/AGENTS.md"
   node "$PI_HELPER" settings-check "$PI_AGENT_DIR/settings.json" "$PI_MODE" "$REPO_DIR" >/dev/null
   if [ "$PI_MODE" = gui ]; then
     node "$PI_HELPER" mcp-check "$PI_AGENT_DIR/mcp.json" "$REPO_DIR" >/dev/null
@@ -117,6 +117,8 @@ pi_prepare_state() {
     if [ -L "$PI_AGENT_DIR/$name" ]; then pi_protect_file "$PI_AGENT_DIR/$name"; fi
   done
   if [ "$PI_MODE" = gui ]; then pi_protect_file "$PI_AGENT_DIR/mcp.json"; fi
+  copy_config "$REPO_DIR/.pi/agent/AGENTS.md" "$PI_AGENT_DIR/AGENTS.md"
+  PI_SUCCESSES+=("Pi 用户级指令 AGENTS.md 已部署")
   local private_node="${XDG_DATA_HOME:-$HOME/.local/share}/pi-node/current"
   if [ -e "$private_node" ] || [ -L "$private_node" ]; then
     ensure_directory "$(dirname "$private_node")"
@@ -158,7 +160,7 @@ pi_install_host() {
 pi_install_extensions() {
   PI_PHASE="Pi 插件"
   local package
-  for package in '@juicesharp/rpiv-ask-user-question' '@juicesharp/rpiv-todo' \
+  for package in '@juicesharp/rpiv-ask-user-question' \
     pi-subagents pi-web-access pi-extmgr "$PI_PLANNER"; do
     if "$PI_BIN" install "npm:$package" --no-approve; then
       PI_SUCCESSES+=("插件 $package")
@@ -206,16 +208,17 @@ setup_pi() {
   trap 'exit 143' TERM
   if has_gui; then PI_MODE=gui; PI_PLANNER='@plannotator/pi-extension'; fi
   if [ "$DRY_RUN" -eq 1 ]; then
-    log "[dry-run] 将按需安装 NVM（官方 v0.40.8，PROFILE=/dev/null），提示新装结果"
+    log "[dry-run] 将按需安装 NVM（官方 v0.40.8，PROFILE=/dev/null）"
     log "[dry-run] 将通过 NVM 安装最新 LTS Node，并把具体版本设为 default"
-    log "[dry-run] 将预检并备份 Pi 配置及链接；停用已有 Pi 私有 Node 入口"
+    log "[dry-run] 将预检、备份并合并 Pi 配置，停用已有 Pi 私有 Node 入口"
+    log "[dry-run] 将备份并复制 .pi/agent/AGENTS.md 到 \${PI_CODING_AGENT_DIR:-\$HOME/.pi/agent}/AGENTS.md，保存为独立文件"
     log "[dry-run] 首装：curl -fsSL https://pi.dev/install.sh | sh；已有官方 Pi：pi update"
-    log "[dry-run] 将更新问答、todo、pi-subagents、pi-web-access、pi-extmgr 和 $PI_PLANNER"
-    log "[dry-run] 将禁用已存在的另一计划插件的全部资源；保留其他配置与凭据"
+    log "[dry-run] 将安装或更新问答、pi-subagents、pi-web-access、pi-extmgr 和 $PI_PLANNER"
+    log "[dry-run] 将禁用已存在的另一计划插件的全部资源"
     if has_gui; then
       log "[dry-run] 将按需注册 Context7：https://mcp.context7.com/mcp（direct）；用户手动执行 pi mcp login context7"
     else
-      log "[dry-run] 无 GUI：不安装 Plannotator；不注册 Context7，保留已有 MCP 配置"
+      log "[dry-run] 无 GUI：保留已有 MCP 配置"
     fi
     return
   fi
