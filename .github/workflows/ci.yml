@@ -1,0 +1,24 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install zsh
+        run: |
+          if ! command -v zsh >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y zsh
+          fi
+      - name: bash syntax check
+        run: bash -n bootstrap.sh
+      - name: zsh syntax check
+        run: zsh -n .zshrc
+      - name: Run tests
+        run: python3 -m unittest discover -s tests -v
