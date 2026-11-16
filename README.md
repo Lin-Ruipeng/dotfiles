@@ -53,6 +53,7 @@ bash bootstrap.sh
 | 必需 | vim | `sudo apt install vim` |
 | 必需 | bat | `sudo apt install bat`（Ubuntu 二进制名为 `batcat`） |
 | 必需 | fzf | `sudo apt install fzf` |
+| 必需 | curl | `sudo apt install curl` |
 | 必需 | uv | Astral 官方独立安装脚本 `curl -LsSf https://astral.sh/uv/install.sh \| sh`，默认装到 `~/.local/bin` 供当前用户使用 |
 | 必需 | Oh My Zsh | `git clone --depth=1 https://github.com/ohmyzsh/ohmyzsh.git ~/.oh-my-zsh` |
 | 必需 | 插件 | `git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions.git ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions`（`zsh-syntax-highlighting` 同理） |
