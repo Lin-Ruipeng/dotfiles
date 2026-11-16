@@ -1,6 +1,6 @@
 # dotfiles
 
-面向 WSL / Ubuntu 的 Shell、编辑器、终端和网络配置。脚本只分发配置副本，不安装任何软件。Agent 的部署入口见 [AGENTS.md](AGENTS.md)。
+面向 WSL / Ubuntu 的 Shell、编辑器、终端和网络配置。脚本只复制配置副本，不安装软件。Agent 的部署入口见 [AGENTS.md](AGENTS.md)。
 
 ## 一键部署
 
@@ -11,26 +11,28 @@ bash bootstrap.sh --dry-run
 bash bootstrap.sh
 ```
 
-脚本只做三件事：备份现有配置、复制或合并仓库中的配置、报告缺失的依赖。它不安装软件，部署过程不需要网络。预览和正式部署使用相同的 `--skip-zed` 选项。验证配置和备份均可独立使用后即可移走克隆目录。更新配置时重新运行脚本。
+`--dry-run` 预览不改文件，`--skip-zed` 保留本机 Zed 设置，两者预览和正式部署用法一致。
+
+脚本只做备份、复制或合并配置、报告缺失依赖——不联网、不装软件。部署完确认配置和备份都能独立用，克隆目录就可以删了；更新配置重跑一次即可。
 
 ### 配置目标
 
-图形环境由非空的 `DISPLAY` 或 `WAYLAND_DISPLAY` 判定。下表的配置目录为 `${XDG_CONFIG_HOME:-$HOME/.config}`。桌面依赖随对应配置启用。
+图形环境由非空的 `DISPLAY` 或 `WAYLAND_DISPLAY` 判定。下表的配置目录为 `${XDG_CONFIG_HOME:-$HOME/.config}`。图形环境下才会检查桌面相关依赖。
 
 | 源文件 | 部署条件与目标 |
 | --- | --- |
 | [`.zshrc`](.zshrc) | 始终复制到 `~/.zshrc` |
 | [`.vimrc`](.vimrc) | 始终复制到 `~/.vimrc` |
 | [Ghostty](.config/ghostty/config) | 非 WSL 图形环境，复制到配置目录的 `ghostty/config` |
-| [VS Code](.config/Code/User/settings.json) | 图形环境（含 WSLg），合并到 Linux 稳定版的 `Code/User/settings.json` |
+| [VS Code](.config/Code/User/settings.json) | 图形环境（含 WSLg），合并到 Linux 版 VS Code 的 `Code/User/settings.json` |
 | [Zed](.config/zed/settings.json) | 图形环境（含 WSLg），复制到 `zed/settings.json`。用 `--skip-zed` 保留整份本机设置 |
 | [`.wslconfig`](.wslconfig) | WSL 中复制到 Windows 用户目录。变更后由用户在 Windows 执行 `wsl --shutdown` |
 
 ### 桌面配置
 
-- **光标**。Ghostty 和 VS Code 使用樱花粉色 `#FEDFE1` 方块光标及深色 `#1E1E2E` 光标内文字。VS Code 只合并光标条目，保留其他设置、JSONC 注释和尾随逗号。合并需要 Python 3。
-- **Ghostty**。随系统明暗切换 Catppuccin Latte / Mocha。使用 FiraCode Nerd Font Mono 和 Noto Sans Mono CJK SC。用 `ghostty +show-config` 查看生效配置，`ghostty +list-themes` 查看内置主题。若 Ubuntu 启动入口带有 `--shell-integration-features=ssh-env`，它会覆盖文件里的 `no-cursor`。输入提示处仍是竖线时，在用户级桌面入口、D-Bus 服务和 systemd 服务的覆盖配置中移除该启动参数，然后重新打开 Ghostty。 [官方配置文档](https://ghostty.org/docs/config)
-- **Zed**。模板设置 UI 字号 24、编辑区字号 20、One Light / One Dark 主题和 DeepSeek 内联助手。脚本替换 `settings.json`，保留目录中的独立主题文件、键位文件和其他文件。模型服务认证在本机配置。 [官方配置文档](https://zed.dev/docs/configuring-zed)
+- **光标**。Ghostty 和 VS Code 用樱花粉 `#FEDFE1` 方块光标、深色 `#1E1E2E` 光标内文字。VS Code 只合并光标条目，保留其他设置、JSONC 注释和尾随逗号。
+- **Ghostty**。随系统明暗切换 Catppuccin Latte / Mocha，字体 FiraCode Nerd Font Mono + Noto Sans Mono CJK SC。用 `ghostty +show-config` 看生效配置、`ghostty +list-themes` 看内置主题。若输入提示处光标仍是竖线，多半是 Ubuntu 启动入口带了 `--shell-integration-features=ssh-env` 覆盖了文件里的 `no-cursor`——在用户级桌面入口、D-Bus 服务或 systemd 服务的覆盖配置里去掉这个参数，重开 Ghostty 即可。 [官方配置文档](https://ghostty.org/docs/config)
+- **Zed**。UI 字号 24、编辑区字号 20、One Light / One Dark 主题、DeepSeek 内联助手。脚本替换 `settings.json`，保留目录里的独立主题文件、键位文件等。DeepSeek 的 API key 在本机配置，仓库不含。 [官方配置文档](https://zed.dev/docs/configuring-zed)
 
 ### 旧链接迁移与备份恢复
 
@@ -40,9 +42,9 @@ bash bootstrap.sh
 
 ### 本机专用配置
 
-`.zshrc` 最后加载 `~/.zshrc.local`。需要随脚本复制本机扩展时，把它放在仓库外的临时部署副本根目录。
+`.zshrc` 最后加载 `~/.zshrc.local`。想让脚本帮你复制本机扩展的话，把 `.zshrc.local` 放在克隆目录根目录——该文件已被 `.gitignore` 忽略，不会进 git。
 
-剪贴板别名为 `cl-copy` 和 `cl-paste`。Wayland 会话用 `wl-clipboard`，X11 会话用 `xclip`。
+剪贴板别名为 `cl-copy` 和 `cl-paste`：Wayland 会话用 `wl-clipboard`，X11 会话用 `xclip`。
 
 ### 依赖清单
 
@@ -54,14 +56,14 @@ bash bootstrap.sh
 | 必需 | bat | `sudo apt install bat`（Ubuntu 二进制名为 `batcat`） |
 | 必需 | fzf | `sudo apt install fzf` |
 | 必需 | curl | `sudo apt install curl` |
-| 必需 | uv | Astral 官方独立安装脚本 `curl -LsSf https://astral.sh/uv/install.sh \| sh`，默认装到 `~/.local/bin` 供当前用户使用 |
+| 必需 | uv | Astral 官方独立安装脚本 `curl -LsSf https://astral.sh/uv/install.sh \| sh`，装到 `~/.local/bin` |
 | 必需 | Oh My Zsh | `git clone --depth=1 https://github.com/ohmyzsh/ohmyzsh.git ~/.oh-my-zsh` |
 | 必需 | 插件 | `git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions.git ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions`（`zsh-syntax-highlighting` 同理） |
 | 可选 | Rust / cargo | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh` |
 | 桌面（非 WSL） | ghostty | Ubuntu 26.04+ 用 `sudo apt install ghostty`，其他版本见[官方安装渠道](https://ghostty.org/docs/install/binary) |
 | 桌面 | Zed | [官方下载](https://zed.dev/download) / [Linux 安装说明](https://zed.dev/docs/linux) |
 | 桌面 | VS Code | [官方下载](https://code.visualstudio.com/download) |
-| 桌面部署工具 | Python 3 | `sudo apt install python3` |
+| 桌面 | Python 3 | `sudo apt install python3`（VS Code 合并用） |
 | 桌面 | 剪贴板工具 | Wayland 用 `sudo apt install wl-clipboard`，X11 用 `sudo apt install xclip` |
 | Ghostty | FiraCode Nerd Font | 从 [nerd-fonts](https://github.com/ryanoasis/nerd-fonts) 下载 `FiraCode.zip`，解压到 `~/.local/share/fonts` 后执行 `fc-cache -fv` |
 | Ghostty | Noto CJK | `sudo apt install fonts-noto-cjk` |
