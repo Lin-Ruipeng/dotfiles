@@ -9,12 +9,16 @@ STRINGS_OR_TRAILING_COMMAS = re.compile(r'"(?:\\.|[^"\\])*"|,(?=\s*[\]}])')
 DECODER = json.JSONDecoder()
 
 
-def parse_jsonc(text):
+def mask_comments(text):
     def mask_comment(match):
         token = match.group()
         return token if token.startswith('"') else re.sub(r"[^\r\n]", " ", token)
 
-    uncommented = STRINGS_OR_COMMENTS.sub(mask_comment, text)
+    return STRINGS_OR_COMMENTS.sub(mask_comment, text)
+
+
+def parse_jsonc(text):
+    uncommented = mask_comments(text)
     sanitized = STRINGS_OR_TRAILING_COMMAS.sub(
         lambda match: match.group() if match.group().startswith('"') else " ",
         uncommented,
@@ -26,6 +30,13 @@ def parse_jsonc(text):
 
 
 def merge_settings(text, overlay):
+    if not mask_comments(text).strip():
+        # 零字节 / 纯空白 / 纯注释：无 JSON token，按空对象合并。
+        prefix = ""
+        if text.strip():
+            # 纯注释：原文保留在合并结果之前；补尾换行防止 // 行注释吞掉 "{"。
+            prefix = text if text.endswith("\n") else text + "\n"
+        return prefix + merge_settings("{}\n", overlay)
     sanitized, uncommented, current = parse_jsonc(text)
     edits = []
 
@@ -80,8 +91,6 @@ def merge_settings(text, overlay):
         else:
             indent = close_indent + "    "
         trailing_comma = last_end is not None and "," in uncommented[last_end:close]
-        if last_end is not None and not trailing_comma:
-            edits.append((last_end, last_end, ","))
         properties = []
         for key, value in missing.items():
             rendered = json.dumps(value, ensure_ascii=False, indent=4).replace("\n", "\n" + indent)
@@ -90,6 +99,12 @@ def merge_settings(text, overlay):
         if trailing_comma:
             addition += ","
         addition += "\n" + close_indent
+        if last_end is not None and not trailing_comma:
+            if last_end == close:
+                # `}` 紧跟末成员值时两个插入点重合，把逗号并入 addition 前缀，避免顺序颠倒破坏 JSON。
+                addition = "," + addition
+            else:
+                edits.append((last_end, last_end, ","))
         edits.append((close, close, addition))
 
     update_object(skip_space(0), overlay)
@@ -110,7 +125,7 @@ def main():
         overlay = json.loads(args.fragment.read_text(encoding="utf-8"))
         if not isinstance(overlay, dict):
             raise ValueError("The settings fragment must be a JSON object")
-        original = args.settings.read_text(encoding="utf-8") if args.settings.is_file() else "{}\n"
+        original = args.settings.read_text(encoding="utf-8-sig") if args.settings.is_file() else "{}\n"
         merged = merge_settings(original, overlay)
         if args.check:
             print("unchanged" if merged == original else "changed")
