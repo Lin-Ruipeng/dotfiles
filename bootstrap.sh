@@ -78,7 +78,9 @@ backup_target() {
 # 递归处理父目录，防止配置仍经 ~/.config 等目录链接依赖仓库。
 ensure_directory() {
   local directory="$1" parent
+  case "$directory" in /*) ;; *) die "ensure_directory 需要绝对路径: $directory" ;; esac
   [ "$directory" = / ] && return 0
+  [ "$directory" = "${HOME%/}" ] && return 0
   parent="$(dirname "$directory")"
   ensure_directory "$parent"
   if [ -L "$directory" ]; then
@@ -106,6 +108,7 @@ ensure_directory() {
 
 has_linked_parent() {
   local parent
+  case "$1" in /*) ;; *) die "has_linked_parent 需要绝对路径: $1" ;; esac
   parent="$(dirname "$1")"
   while [ "$parent" != / ]; do
     [ -L "$parent" ] && return 0
@@ -116,6 +119,7 @@ has_linked_parent() {
 
 validate_config() {
   local src="$1" dest="$2" parent
+  case "$dest" in /*) ;; *) die "validate_config 需要绝对路径: $dest" ;; esac
   [ -f "$src" ] && [ -r "$src" ] || die "配置源文件缺失或不可读: $src"
   case "$dest" in
     "$REPO_DIR"|"$REPO_DIR"/*) die "部署目标不能放在仓库内: $dest" ;;
