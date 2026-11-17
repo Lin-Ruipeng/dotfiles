@@ -74,6 +74,20 @@ bash bootstrap.sh
 
 按依赖清单手动安装软件时，网络受限就先启动代理。WSL 镜像网络下，Windows 侧启动 Sparkle 后，在 WSL 执行 `source ~/.zshrc` 和 `setproxy`。`setproxy` 和 `unsetproxy` 也会修改 Git 全局代理设置。
 
+## PowerShell 配置（Windows）
+
+[`Microsoft.PowerShell_profile.ps1`](Microsoft.PowerShell_profile.ps1) 让每个 PowerShell 7 会话默认用 UTF-8 无 BOM 编码，并提供 `utf8` 和 `gbk` 两个别名快速切换——跑 `ipconfig`/`systeminfo` 等中文原生命令时切 GBK，日常用 UTF-8。
+
+**需要 PowerShell 7（pwsh）**。Windows PowerShell 5.1 不认识 `utf8NoBOM` 编码值，装了也用不了。pwsh 7 安装见[官方文档](https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows)。
+
+bootstrap.sh 不管这个文件，手动复制到 `$PROFILE`：
+
+```powershell
+Copy-Item Microsoft.PowerShell_profile.ps1 $PROFILE.CurrentUserCurrentHost
+```
+
+新开 pwsh 会话即生效，三个命令可用：`utf8`、`gbk`、`Get-EncodingInfo`。
+
 ## 验证与维护
 
 ```bash
